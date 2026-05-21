@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Owl Pellet Virtual Dissection Lab</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --dark:    #0d1f0d;
+  --forest:  #1b4332;
+  --mid:     #2d6a4f;
+  --sage:    #52b788;
+  --cream:   #f0ead2;
+  --gold:    #d4a017;
+  --amber:   #e8950a;
+  --bone:    #e8d5a3;
+  --bone2:   #c4a25a;
+  --red:     #c44536;
+  --blue:    #1d6fa4;
+  --txt:     #e8f0e8;
+  --muted:   #95b8a0;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--dark);
+  color: var(--txt);
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+#hdr {
+  background: var(--forest);
+  border-bottom: 2px solid var(--gold);
+  padding: 11px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+}
+#hdr .logo { font-weight: 800; font-size: 1rem; color: var(--gold); letter-spacing: .3px; }
+.steps { display: flex; gap: 4px; }
+.step {
+  padding: 4px 11px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;
+  background: var(--mid); color: var(--muted); transition: all .25s;
+}
+.step.active { background: var(--gold); color: var(--dark); }
+.step.done   { background: var(--sage); color: var(--dark); }
+
+/* ── SCREENS ── */
+.screen { display: none; padding: 28px 18px; max-width: 1120px; margin: 0 auto; }
+.screen.active { display: block; }
+
+/* ── BUTTONS ── */
+.btn {
+  background: var(--gold); color: var(--dark); border: none;
+  padding: 13px 32px; font-size: 1rem; font-weight: 700;
+  border-radius: 9px; cursor: pointer; transition: all .2s; letter-spacing: .3px;
+}
+.btn:hover { background: var(--amber); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212,160,23,.35); }
+.btn:active { transform: translateY(0); }
+.btn.sec { background: var(--mid); color: var(--txt); }
+.btn.sec:hover { background: var(--sage); color: var(--dark); box-shadow: none; }
+.btn.disabled { opacity: .45; pointer-events: none; }
+.btn-row { display: flex; gap: 12px; justify-content: center; margin-top: 22px; }
+
+/* ── CARDS ── */
+.card {
+  background: var(--forest); border-radius: 14px; padding: 20px 22px;
+  border-left: 4px solid var(--gold);
+}
+.card h3 { color: var(--gold); margin-bottom: 9px; font-size: 1rem; }
+.card p  { line-height: 1.75; color: var(--cream); font-size: .93rem; }
+
+/* ══════════════════════════════════════════════
+   INTRO SCREEN
+══════════════════════════════════════════════ */
+#s-intro .wrap {
+  max-width: 700px; margin: 0 auto; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 22px;
+}
+.big-owl { font-size: 88px; line-height: 1; }
+.sc-title { font-size: 2.1rem; font-weight: 800; color: var(--gold); line-height: 1.2; }
+.sc-sub   { font-size: 1rem; color: var(--muted); }
+.two-col  { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; width: 100%; }
+
+.ngss-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(212,160,23,.15); border: 1px solid var(--gold);
+  border-radius: 20px; padding: 5px 14px; font-size: .8rem; color: var(--gold);
+}
+
+/* ══════════════════════════════════════════════
+   DISSECT SCREEN
+══════════════════════════════════════════════ */
+#s-dissect .layout {
+  display: grid; grid-template-columns: 1fr 300px; gap: 22px; align-items: start;
+}
+.dissect-main {
+  background: var(--forest); border-radius: 16px; padding: 22px; text-align: center;
+}
+.dissect-main h2 { color: var(--gold); font-size: 1.45rem; margin-bottom: 4px; }
+.dissect-main .hint { color: var(--muted); font-size: .87rem; margin-bottom: 18px; }
+
+#pellet-wrap {
+  position: relative; width: 280px; height: 160px; margin: 0 auto 16px;
+  cursor: pointer;
+}
+#pellet-svg { display: block; transition: transform .12s; }
+#pellet-wrap:hover #pellet-svg { transform: scale(1.04); }
+#pellet-wrap:active #pellet-svg { transform: scale(.96); }
+
+.click-pulse {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  width: 60px; height: 60px; border-radius: 50%;
+  background: rgba(212,160,23,.25); pointer-events: none;
+  animation: pulseFade 1.4s ease-in-out infinite;
+}
+@keyframes pulseFade {
+  0%,100% { transform: translate(-50%,-50%) scale(.7); opacity: .8; }
+  50%      { transform: translate(-50%,-50%) scale(1.5); opacity: 0; }
+}
+.click-pulse.hide { display: none; }
+
+.prog-bar { width: 100%; height: 12px; background: var(--dark); border-radius: 6px; overflow: hidden; }
+.prog-fill {
+  height: 100%; border-radius: 6px;
+  background: linear-gradient(90deg, var(--sage), var(--gold));
+  transition: width .4s ease; width: 0%;
+}
+.prog-label { font-size: .82rem; color: var(--muted); margin: 6px 0 14px; }
+
+.bones-tray {
+  display: flex; flex-wrap: wrap; gap: 7px; justify-content: center;
+  padding: 12px; min-height: 70px;
+  background: rgba(0,0,0,.2); border-radius: 10px;
+}
+.bone-tag {
+  background: var(--bone); color: var(--dark);
+  border-radius: 18px; padding: 5px 11px; font-size: .8rem; font-weight: 600;
+  border: 2px solid var(--bone2); display: flex; align-items: center; gap: 4px;
+  animation: boneAppear .35s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes boneAppear {
+  from { transform: scale(0) rotate(-15deg); opacity: 0; }
+  to   { transform: scale(1) rotate(0);      opacity: 1; }
+}
+
+/* Sidebar (both dissect + sort) */
+.sidebar {
+  background: var(--forest); border-radius: 16px; padding: 18px;
+}
+.sidebar h3 { color: var(--gold); margin-bottom: 13px; font-size: .97rem; }
+.guide-entry {
+  display: flex; align-items: flex-start; gap: 9px;
+  margin-bottom: 10px; padding: 9px; background: var(--mid); border-radius: 8px;
+}
+.guide-icon { font-size: 1.3rem; min-width: 28px; text-align: center; }
+.guide-text strong { display: block; font-size: .82rem; margin-bottom: 2px; }
+.guide-text span   { font-size: .76rem; color: var(--muted); line-height: 1.4; }
+
+/* ══════════════════════════════════════════════
+   SORT SCREEN
+══════════════════════════════════════════════ */
+#s-sort .layout {
+  display: grid; grid-template-columns: 1fr 290px; gap: 22px; align-items: start;
+}
+.sort-main { background: var(--forest); border-radius: 16px; padding: 20px; }
+.sort-main h2 { color: var(--gold); font-size: 1.4rem; margin-bottom: 4px; }
+.sort-main > .hint { color: var(--muted); font-size: .87rem; margin-bottom: 14px; }
+
+.sort-pool {
+  display: flex; flex-wrap: wrap; gap: 9px; padding: 12px;
+  background: rgba(0,0,0,.2); border-radius: 10px; min-height: 60px; margin-bottom: 18px;
+}
+.sort-bone {
+  background: var(--bone); color: var(--dark);
+  border: 2px solid var(--bone2); border-radius: 9px;
+  padding: 7px 11px; font-size: .8rem; font-weight: 600;
+  cursor: pointer; transition: all .18s;
+  display: flex; align-items: center; gap: 4px; user-select: none;
+}
+.sort-bone:hover  { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.35); }
+.sort-bone.sel    { background: var(--gold); border-color: var(--amber); box-shadow: 0 0 0 3px rgba(212,160,23,.4); }
+.sort-bone.placed { opacity: .35; pointer-events: none; }
+
+.bins-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sort-bin {
+  background: var(--mid); border-radius: 12px; padding: 11px;
+  border: 2px dashed var(--muted); min-height: 90px; cursor: pointer; transition: all .2s;
+}
+.sort-bin:hover, .sort-bin.hi { border-color: var(--gold); background: #3a7a5a; }
+.sort-bin h4 { font-size: .85rem; color: var(--gold); margin-bottom: 7px; }
+.bin-placed { display: flex; flex-wrap: wrap; gap: 5px; }
+.bin-placed .mini-bone {
+  background: var(--bone); color: var(--dark); border: 1.5px solid var(--bone2);
+  border-radius: 6px; padding: 3px 8px; font-size: .73rem; font-weight: 600;
+}
+.bin-hint { font-size: .76rem; color: var(--muted); font-style: italic; }
+
+/* sort score */
+.sort-score-bar {
+  margin-top: 14px; padding: 10px 14px;
+  background: var(--mid); border-radius: 8px; font-size: .85rem;
+  display: flex; align-items: center; gap: 8px;
+}
+.sort-score-bar .correct { color: var(--sage); font-weight: 700; }
+.sort-score-bar .wrong   { color: #e07070; font-weight: 700; }
+
+/* ══════════════════════════════════════════════
+   IDENTIFY SCREEN
+══════════════════════════════════════════════ */
+#s-identify .layout {
+  display: grid; grid-template-columns: 1fr 300px; gap: 22px; align-items: start;
+}
+.id-main { background: var(--forest); border-radius: 16px; padding: 20px; }
+.id-main h2 { color: var(--gold); font-size: 1.4rem; margin-bottom: 4px; }
+.id-main > .hint { color: var(--muted); font-size: .87rem; margin-bottom: 16px; }
+
+.skull-item {
+  background: var(--mid); border-radius: 12px; padding: 14px; margin-bottom: 12px;
+}
+.skull-item h4 { margin-bottom: 10px; font-size: .88rem; font-weight: 700; }
+
+.skull-svg-wrap {
+  display: flex; justify-content: center; margin-bottom: 12px;
+}
+
+.skull-choices { display: flex; flex-direction: column; gap: 7px; }
+.skull-choice {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; background: var(--forest); border-radius: 8px;
+  cursor: pointer; border: 2px solid transparent; transition: all .18s; font-size: .84rem;
+}
+.skull-choice:hover { border-color: var(--gold); }
+.skull-choice.correct { border-color: var(--sage); background: rgba(82,183,136,.15); }
+.skull-choice.wrong   { border-color: var(--red);  background: rgba(196,69,54,.1);  }
+.skull-choice.locked  { pointer-events: none; }
+.sc-icon { font-size: 1.1rem; }
+
+.id-feedback {
+  margin-top: 8px; padding: 9px 12px; border-radius: 8px;
+  font-size: .83rem; line-height: 1.55; display: none;
+}
+
+/* Reference panel */
+.ref-panel { background: var(--forest); border-radius: 16px; padding: 18px; }
+.ref-panel h3 { color: var(--gold); margin-bottom: 13px; font-size: .95rem; }
+.ref-card {
+  background: var(--mid); border-radius: 10px; padding: 12px; margin-bottom: 10px;
+}
+.ref-card-hd { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.ref-card-hd .an-icon { font-size: 1.25rem; }
+.ref-card-hd strong  { font-size: .85rem; }
+.ref-card-hd em      { font-size: .73rem; color: var(--muted); }
+.ref-card p          { font-size: .77rem; color: var(--cream); line-height: 1.5; }
+.skull-tag {
+  display: inline-block; margin-top: 5px; padding: 2px 8px;
+  background: rgba(212,160,23,.2); border-radius: 10px;
+  font-size: .71rem; color: var(--gold); font-weight: 600;
+}
+
+/* skull silhouettes (SVG) inside ref panel */
+.skull-silhouette { margin: 8px auto 4px; display: block; }
+
+/* ══════════════════════════════════════════════
+   FOOD WEB SCREEN
+══════════════════════════════════════════════ */
+#s-foodweb .wrap { max-width: 820px; margin: 0 auto; }
+.fw-card { background: var(--forest); border-radius: 16px; padding: 24px; }
+.fw-card h2 { color: var(--gold); font-size: 1.4rem; margin-bottom: 5px; }
+.fw-card > .hint { color: var(--muted); font-size: .87rem; margin-bottom: 22px; }
+
+.fw-diagram {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  margin-bottom: 22px;
+}
+.fw-row { display: flex; gap: 14px; align-items: center; justify-content: center; flex-wrap: wrap; }
+.fw-node {
+  background: var(--mid); border-radius: 12px; padding: 12px 18px;
+  text-align: center; border: 2px solid var(--sage); min-width: 108px;
+}
+.fw-node .ni  { font-size: 2rem; display: block; margin-bottom: 3px; }
+.fw-node .nl  { font-size: .8rem; font-weight: 700; }
+.fw-node .nt  { font-size: .7rem; color: var(--muted); }
+.fw-node.sun  { border-color: var(--amber); background: rgba(229,149,10,.12); }
+.fw-node.prod { border-color: #5a9e4e; }
+.fw-node.con1 { border-color: var(--gold); }
+.fw-node.con2 { border-color: #b07ee8; }
+.fw-node.apex { border-color: var(--sage); }
+
+.fw-arrow {
+  display: flex; flex-direction: column; align-items: center;
+  color: var(--sage); font-size: 1.5rem; line-height: 1;
+}
+.fw-arrow small { font-size: .68rem; color: var(--muted); }
+
+.energy-box {
+  background: rgba(212,160,23,.1); border: 1px solid var(--gold);
+  border-radius: 10px; padding: 14px 18px; font-size: .87rem;
+  line-height: 1.68; color: var(--cream);
+}
+.energy-box strong { color: var(--gold); }
+
+/* ══════════════════════════════════════════════
+   RESULTS SCREEN
+══════════════════════════════════════════════ */
+#s-results .wrap { max-width: 740px; margin: 0 auto; text-align: center; }
+#s-results h2 { color: var(--gold); font-size: 1.8rem; margin-bottom: 6px; }
+#s-results .sub { color: var(--muted); font-size: .93rem; margin-bottom: 24px; }
+
+.score-ring {
+  width: 140px; height: 140px; border-radius: 50%;
+  background: var(--forest); border: 4px solid var(--gold);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  margin: 0 auto 22px;
+}
+.score-num { font-size: 2.6rem; font-weight: 800; color: var(--gold); line-height: 1; }
+.score-lbl { font-size: .8rem; color: var(--muted); }
+
+.res-card { background: var(--forest); border-radius: 14px; padding: 18px 22px; margin-bottom: 14px; text-align: left; }
+.res-card h3 { color: var(--gold); margin-bottom: 11px; font-size: .97rem; }
+
+.prey-badges { display: flex; gap: 10px; flex-wrap: wrap; }
+.prey-badge {
+  background: var(--mid); border-radius: 10px; padding: 9px 14px;
+  display: flex; align-items: center; gap: 7px; font-size: .85rem; font-weight: 600;
+}
+
+.eco-fact {
+  display: flex; gap: 9px; align-items: flex-start;
+  margin-bottom: 9px; padding: 9px; background: var(--mid); border-radius: 8px;
+  font-size: .85rem; line-height: 1.58; color: var(--cream);
+}
+.eco-fact .fi { font-size: 1.1rem; min-width: 22px; }
+
+/* ── UTIL ── */
+.hidden { display: none !important; }
+.mt-16  { margin-top: 16px; }
+.mt-22  { margin-top: 22px; }
+
+/* ── SKULL SPECIMEN (Identify) ── */
+.skull-specimen {
+  background: #192919; border: 2px solid var(--bone2);
+  border-radius: 10px; padding: 14px; margin-bottom: 13px; text-align: center;
+}
+.specimen-label {
+  font-size: .7rem; color: var(--muted); margin-bottom: 8px;
+  text-transform: uppercase; letter-spacing: 1.2px;
+}
+.obs-features {
+  font-size: .81rem; color: var(--cream); line-height: 1.65; margin-top: 10px;
+  text-align: left; background: rgba(0,0,0,.25); border-radius: 6px; padding: 9px 11px;
+}
+.obs-features strong { color: var(--gold); }
+
+/* ── FOOD WEB INTERACTIVE ── */
+.fw-build-layout {
+  display: grid; grid-template-columns: 1fr 252px; gap: 18px;
+  align-items: start; margin-bottom: 16px;
+}
+.fw-slots-col { display: flex; flex-direction: column; gap: 5px; }
+.fw-arrow-row { padding-left: 18px; color: var(--sage); font-size: .82rem; line-height: 1.9; }
+.fw-slot-card {
+  background: var(--mid); border-radius: 12px; padding: 12px 14px;
+  border: 2px dashed var(--muted); min-height: 64px; transition: all .2s; cursor: pointer;
+}
+.fw-slot-card:hover, .fw-slot-card.hi { border-color: var(--gold); background: #3a7a5a; }
+.fw-slot-card .slot-label { font-size: .8rem; color: var(--gold); font-weight: 700; margin-bottom: 4px; }
+.fw-slot-card .slot-hint  { font-size: .73rem; color: var(--muted); font-style: italic; }
+.fw-slot-card .slot-placed { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.fw-slot-card.correct { border-color: var(--sage); border-style: solid; background: rgba(82,183,136,.1); pointer-events: none; }
+.fw-slot-card.wrong   { border-color: var(--red);  border-style: solid; background: rgba(196,69,54,.07); pointer-events: none; }
+.fw-placed-org {
+  background: var(--bone); color: var(--dark); border-radius: 7px;
+  padding: 4px 9px; font-size: .79rem; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 3px;
+}
+.fw-placed-org.correct-org { background: rgba(82,183,136,.3); color: var(--txt); border: 1px solid var(--sage); }
+.fw-placed-org.wrong-org   { background: rgba(196,69,54,.25); color: #ffaaaa; border: 1px solid var(--red); text-decoration: line-through; }
+.fw-placed-org.hint-org    { background: rgba(82,183,136,.15); color: var(--sage); border: 1px dashed var(--sage); font-style: italic; }
+
+.fw-pool-col { background: var(--forest); border-radius: 14px; padding: 16px; }
+.fw-pool-col h3 { color: var(--gold); margin-bottom: 10px; font-size: .9rem; }
+.fw-org-cards { display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
+.fw-org-card {
+  background: var(--bone); color: var(--dark); border: 2px solid var(--bone2);
+  border-radius: 9px; padding: 8px 12px; cursor: pointer;
+  font-size: .84rem; font-weight: 600; display: flex; align-items: center; gap: 7px;
+  transition: all .18s; user-select: none;
+}
+.fw-org-card:hover  { transform: translateX(-3px); box-shadow: 3px 3px 10px rgba(0,0,0,.3); }
+.fw-org-card.sel    { background: var(--gold); border-color: var(--amber); box-shadow: 0 0 0 3px rgba(212,160,23,.4); }
+.fw-org-card.placed { opacity: .25; pointer-events: none; }
+
+.fw-check-result {
+  background: var(--mid); border-radius: 10px; padding: 14px 16px;
+  font-size: .86rem; line-height: 1.65; color: var(--cream);
+  margin-bottom: 14px; display: none;
+}
+.fw-check-result strong { color: var(--gold); }
+
+/* ── REFLECTION TEXTAREAS ── */
+.reflect-q { margin-bottom: 16px; }
+.reflect-q p { font-size: .86rem; color: var(--cream); margin-bottom: 6px; line-height: 1.55; }
+.reflect-ta {
+  width: 100%; background: rgba(0,0,0,.28); border: 1.5px solid var(--mid);
+  border-radius: 8px; color: var(--txt); font-family: inherit;
+  font-size: .84rem; line-height: 1.6; padding: 9px 12px;
+  resize: vertical; min-height: 68px; transition: border-color .2s;
+}
+.reflect-ta:focus { outline: none; border-color: var(--gold); }
+.reflect-ta::placeholder { color: var(--muted); font-style: italic; }
+</style>
+</head>
+<body>
+
+<!-- ─── HEADER ──────────────────────────────── -->
+<div id="hdr">
+  <span class="logo">🦉 Owl Pellet Dissection Lab</span>
+  <div class="steps">
+    <span class="step" data-s="dissect">1 · Dissect</span>
+    <span class="step" data-s="sort">2 · Sort</span>
+    <span class="step" data-s="identify">3 · Identify</span>
+    <span class="step" data-s="foodweb">4 · Food Web</span>
+    <span class="step" data-s="results">5 · Results</span>
+  </div>
+</div>
+
+<!-- ─── INTRO ──────────────────────────────── -->
+<div id="s-intro" class="screen active">
+  <div class="wrap">
+    <div class="big-owl">🦉</div>
+    <h1 class="sc-title">Virtual Owl Pellet<br>Dissection Lab</h1>
+    <p class="sc-sub">Discover what owls eat — and what that reveals about the ecosystem!</p>
+
+    <div class="two-col">
+      <div class="card">
+        <h3>🔬 What is an owl pellet?</h3>
+        <p>Owls swallow prey whole but cannot digest bones, fur, and feathers. They compress this material into a compact pellet and <strong>regurgitate it 6–10 hours after eating</strong>. Each pellet contains the skeletal remains of 1–3 prey animals.</p>
+      </div>
+      <div class="card">
+        <h3>🌿 Why study them?</h3>
+        <p>Pellets let us <strong>reconstruct food webs without harming any animals</strong>. By identifying bones, we can determine exactly what the owl ate, calculate energy flow, and monitor local rodent populations as ecosystem health indicators.</p>
+      </div>
+    </div>
+
+    <div class="card" style="border-left-color:var(--sage)">
+      <h3>📋 How to Play</h3>
+      <p>You'll work through <strong>5 phases</strong>: dissect a pellet → sort the bones you find → identify which prey species they belong to → explore the food web → see your results. Each pellet is randomized, so no two labs are alike!</p>
+    </div>
+
+    <span class="ngss-badge">📚 NGSS: LS2-1 · LS2-3 · LS2-6</span>
+
+    <button class="btn" onclick="goTo('dissect')">Begin Dissection →</button>
+  </div>
+</div>
+
+<!-- ─── DISSECT ─────────────────────────────── -->
+<div id="s-dissect" class="screen">
+  <div class="layout">
+
+    <div class="dissect-main">
+      <h2>Step 1 — Excavate the Pellet</h2>
+      <p class="hint" id="dissect-hint">Click the pellet to carefully remove fur and expose bones.</p>
+
+      <div id="pellet-wrap" onclick="clickPellet()">
+        <div class="click-pulse" id="pulse"></div>
+        <svg id="pellet-svg" width="280" height="160" viewBox="0 0 280 160">
+          <defs>
+            <radialGradient id="pg" cx="38%" cy="32%" r="70%">
+              <stop offset="0%"   stop-color="#6b4420"/>
+              <stop offset="55%"  stop-color="#3d2410"/>
+              <stop offset="100%" stop-color="#1a0c06"/>
+            </radialGradient>
+            <filter id="rough" x="-5%" y="-5%" width="110%" height="110%">
+              <feTurbulence type="fractalNoise" baseFrequency="1.2" numOctaves="4" result="n"/>
+              <feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="R" yChannelSelector="G"/>
+            </filter>
+          </defs>
+          <!-- Shadow -->
+          <ellipse cx="140" cy="154" rx="104" ry="9" fill="rgba(0,0,0,.45)"/>
+          <!-- Body -->
+          <ellipse cx="140" cy="76" rx="122" ry="67" fill="url(#pg)" filter="url(#rough)"/>
+          <!-- Fur texture -->
+          <g stroke="#2a1505" stroke-width="1.2" opacity=".55">
+            <line x1="55"  y1="48" x2="45"  y2="70"/>
+            <line x1="75"  y1="37" x2="65"  y2="60"/>
+            <line x1="95"  y1="32" x2="88"  y2="55"/>
+            <line x1="115" y1="30" x2="110" y2="52"/>
+            <line x1="165" y1="30" x2="170" y2="52"/>
+            <line x1="185" y1="33" x2="192" y2="57"/>
+            <line x1="205" y1="40" x2="215" y2="62"/>
+            <line x1="222" y1="54" x2="234" y2="73"/>
+            <line x1="50"  y1="90" x2="38"  y2="108"/>
+            <line x1="230" y1="88" x2="243" y2="106"/>
+          </g>
+          <!-- Cracks (revealed progressively) -->
+          <g id="cracks" fill="none" stroke="#9b7440" stroke-width="1.8" stroke-linecap="round" opacity=".9">
+            <path class="crack" d="M138 28 L142 58"/>
+            <path class="crack" d="M142 58 L128 80 L135 100"/>
+            <path class="crack" d="M142 58 L158 82 L150 108"/>
+            <path class="crack" d="M80  45 L90  68 L75  90"/>
+            <path class="crack" d="M200 48 L188 70 L202 92"/>
+            <path class="crack" d="M135 100 L120 118"/>
+            <path class="crack" d="M150 108 L162 122"/>
+          </g>
+          <!-- Label -->
+          <text id="pellet-label" x="140" y="82" text-anchor="middle"
+                fill="#e8d5a3" font-size="13" font-family="Segoe UI,sans-serif" opacity=".75">
+            Click to dissect!
+          </text>
+        </svg>
+      </div>
+
+      <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
+      <p class="prog-label" id="prog-label">0 bones found</p>
+
+      <div class="bones-tray" id="bones-tray"></div>
+
+      <div class="mt-22">
+        <button class="btn hidden" id="btn-to-sort" onclick="goTo('sort')">Sort My Bones →</button>
+      </div>
+    </div>
+
+    <div class="sidebar">
+      <h3>🔍 Field Guide — Bone Types</h3>
+      <div class="guide-entry">
+        <span class="guide-icon">💀</span>
+        <div class="guide-text">
+          <strong>Skull</strong>
+          <span>The most diagnostic bone. Shape and teeth reveal the species.</span>
+        </div>
+      </div>
+      <div class="guide-entry">
+        <span class="guide-icon">🦷</span>
+        <div class="guide-text">
+          <strong>Jaw (Mandible)</strong>
+          <span>Lower jawbone. Tooth shape confirms diet (herbivore vs. insectivore).</span>
+        </div>
+      </div>
+      <div class="guide-entry">
+        <span class="guide-icon">🦴</span>
+        <div class="guide-text">
+          <strong>Long Bones</strong>
+          <span>Femur (thigh), humerus (upper arm), tibia (shin). Indicate body size.</span>
+        </div>
+      </div>
+      <div class="guide-entry">
+        <span class="guide-icon">〰️</span>
+        <div class="guide-text">
+          <strong>Ribs</strong>
+          <span>Curved, thin bones. Count helps estimate number of prey.</span>
+        </div>
+      </div>
+      <div class="guide-entry">
+        <span class="guide-icon">⬡</span>
+        <div class="guide-text">
+          <strong>Vertebrae</strong>
+          <span>Small spool-shaped spinal bones. Many per prey animal.</span>
+        </div>
+      </div>
+      <div class="guide-entry">
+        <span class="guide-icon">🔲</span>
+        <div class="guide-text">
+          <strong>Scapula</strong>
+          <span>Shoulder blade — flat, triangular. Paired (one per side).</span>
+        </div>
+      </div>
+      <div style="margin-top:14px; padding:10px; background:rgba(212,160,23,.1); border-radius:8px; font-size:.78rem; color:var(--cream); line-height:1.55;">
+        💡 <strong style="color:var(--gold)">Scientist tip:</strong> Finding two skulls means the owl ate two prey animals in one meal!
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ─── SORT ──────────────────────────────── -->
+<div id="s-sort" class="screen">
+  <div class="layout">
+
+    <div class="sort-main">
+      <h2>Step 2 — Sort the Bones</h2>
+      <p class="hint">Click a bone to select it (it turns gold), then click the correct bin to place it.</p>
+
+      <div class="sort-pool" id="sort-pool"></div>
+
+      <div class="bins-grid">
+        <div class="sort-bin" id="bin-skull"     onclick="dropBone('skull')">
+          <h4>💀 Skulls</h4>
+          <div class="bin-placed" id="placed-skull"></div>
+          <p class="bin-hint" id="hint-skull">Click a skull bone, then click here</p>
+        </div>
+        <div class="sort-bin" id="bin-jaw"       onclick="dropBone('jaw')">
+          <h4>🦷 Jaws (Mandibles)</h4>
+          <div class="bin-placed" id="placed-jaw"></div>
+          <p class="bin-hint" id="hint-jaw">Click a jaw bone, then click here</p>
+        </div>
+        <div class="sort-bin" id="bin-long_bone" onclick="dropBone('long_bone')">
+          <h4>🦴 Long Bones</h4>
+          <div class="bin-placed" id="placed-long_bone"></div>
+          <p class="bin-hint" id="hint-long_bone">Femur, humerus, tibia go here</p>
+        </div>
+        <div class="sort-bin" id="bin-small"     onclick="dropBone('small')">
+          <h4>⬡ Small Bones</h4>
+          <div class="bin-placed" id="placed-small"></div>
+          <p class="bin-hint" id="hint-small">Ribs, vertebrae, scapula go here</p>
+        </div>
+      </div>
+
+      <div class="sort-score-bar hidden" id="sort-score-bar"></div>
+
+      <div class="mt-22 btn-row">
+        <button class="btn sec" onclick="goTo('dissect')">← Back</button>
+        <button class="btn hidden" id="btn-to-identify" onclick="goTo('identify')">Identify Skulls →</button>
+      </div>
+    </div>
+
+    <div class="sidebar">
+      <h3>🗂️ Sorting Tips</h3>
+      <div class="guide-entry">
+        <span class="guide-icon">💀</span>
+        <div class="guide-text">
+          <strong>Skulls</strong>
+          <span>Large rounded bone with eye sockets and teeth. Most distinctive shape.</span>
+        </div>
+      </div>
+      <div class="guide-entry">
+        <span class="guide-icon">🦷</span>
+        <div class="guide-text">
+          <strong>Jaws</strong>
+          <span>Curved or L-shaped bone with a row of teeth along one edge.</span>
+        </div>
+      </div>
+      <div class="guide-entry">
+        <span class="guide-icon">🦴</span>
+        <div class="guide-text">
+          <strong>Long Bones</strong>
+          <span>Rod-shaped with expanded rounded ends (epiphyses). Larger than ribs.</span>
+        </div>
+      </div>
+      <div class="guide-entry">
+        <span class="guide-icon">⬡</span>
+        <div class="guide-text">
+          <strong>Small Bones</strong>
+          <span>Ribs (thin curved arcs), vertebrae (tiny spools), and flat scapulae.</span>
+        </div>
+      </div>
+      <div style="margin-top:14px; padding:10px; background:rgba(82,183,136,.1); border-radius:8px; font-size:.78rem; color:var(--cream); line-height:1.55;">
+        ✅ All bones must be sorted before you can continue. Don't worry — incorrect placements will be shown at the end of this step!
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ─── IDENTIFY ──────────────────────────── -->
+<div id="s-identify" class="screen">
+  <div class="layout">
+
+    <div class="id-main">
+      <h2>Step 3 — Identify the Skulls</h2>
+      <p class="hint">The skull is the key diagnostic bone. Use the reference guide → to identify each animal.</p>
+      <div id="skull-questions"></div>
+      <div class="mt-22 btn-row">
+        <button class="btn sec" onclick="goTo('sort')">← Back</button>
+        <button class="btn hidden" id="btn-to-fw" onclick="goTo('foodweb')">Build Food Web →</button>
+      </div>
+    </div>
+
+    <div class="ref-panel">
+      <h3>📖 Skull Reference Guide</h3>
+
+      <!-- Meadow Vole -->
+      <div class="ref-card">
+        <div class="ref-card-hd">
+          <span class="an-icon">🐭</span>
+          <div>
+            <strong>Meadow Vole</strong><br>
+            <em>Microtus pennsylvanicus</em>
+          </div>
+        </div>
+        <svg class="skull-silhouette" width="120" height="56" viewBox="0 0 120 56">
+          <ellipse cx="60" cy="26" rx="50" ry="22" fill="#e8d5a3" stroke="#c4a25a" stroke-width="1.5"/>
+          <ellipse cx="40" cy="22" rx="9" ry="7" fill="#2d6a4f"/>
+          <ellipse cx="78" cy="22" rx="9" ry="7" fill="#2d6a4f"/>
+          <!-- molars -->
+          <rect x="28" y="40" width="8"  height="6" rx="1" fill="#c4a25a"/>
+          <rect x="38" y="40" width="8"  height="6" rx="1" fill="#c4a25a"/>
+          <rect x="72" y="40" width="8"  height="6" rx="1" fill="#c4a25a"/>
+          <rect x="82" y="40" width="8"  height="6" rx="1" fill="#c4a25a"/>
+          <ellipse cx="60" cy="26" rx="50" ry="22" fill="none" stroke="#c4a25a" stroke-width="1.5"/>
+        </svg>
+        <p>Herbivore. Wide, <strong>rounded skull</strong> with large flat molars for grinding grass.</p>
+        <span class="skull-tag">Wide skull · Flat molars · Blunt snout</span>
+      </div>
+
+      <!-- House Mouse -->
+      <div class="ref-card">
+        <div class="ref-card-hd">
+          <span class="an-icon">🐁</span>
+          <div>
+            <strong>House Mouse</strong><br>
+            <em>Mus musculus</em>
+          </div>
+        </div>
+        <svg class="skull-silhouette" width="120" height="56" viewBox="0 0 120 56">
+          <!-- Narrower, slightly longer skull -->
+          <ellipse cx="58" cy="26" rx="44" ry="19" fill="#e8d5a3" stroke="#c4a25a" stroke-width="1.5"/>
+          <!-- Pointed snout protrusion -->
+          <ellipse cx="18" cy="30" rx="14" ry="9" fill="#e8d5a3" stroke="#c4a25a" stroke-width="1.5"/>
+          <ellipse cx="38" cy="20" rx="8"  ry="6" fill="#2d6a4f"/>
+          <ellipse cx="72" cy="20" rx="8"  ry="6" fill="#2d6a4f"/>
+          <rect x="8"  y="36" width="6" height="5" rx="1" fill="#c4a25a"/>
+          <rect x="30" y="40" width="6" height="5" rx="1" fill="#c4a25a"/>
+          <rect x="68" y="40" width="6" height="5" rx="1" fill="#c4a25a"/>
+          <rect x="78" y="40" width="6" height="5" rx="1" fill="#c4a25a"/>
+        </svg>
+        <p>Omnivore. <strong>Narrower, longer skull</strong> with a pointed snout and smaller molars.</p>
+        <span class="skull-tag">Narrow skull · Long snout · Small molars</span>
+      </div>
+
+      <!-- Shrew -->
+      <div class="ref-card">
+        <div class="ref-card-hd">
+          <span class="an-icon">🦔</span>
+          <div>
+            <strong>Short-tailed Shrew</strong><br>
+            <em>Blarina brevicauda</em>
+          </div>
+        </div>
+        <svg class="skull-silhouette" width="120" height="56" viewBox="0 0 120 56">
+          <!-- Very elongated, pointed -->
+          <ellipse cx="68" cy="24" rx="38" ry="16" fill="#e8d5a3" stroke="#c4a25a" stroke-width="1.5"/>
+          <ellipse cx="24" cy="28" rx="22" ry="10" fill="#e8d5a3" stroke="#c4a25a" stroke-width="1.5"/>
+          <!-- tiny pointed snout -->
+          <ellipse cx="6"  cy="30" rx="7"  ry="5"  fill="#e8d5a3" stroke="#c4a25a" stroke-width="1.5"/>
+          <ellipse cx="58" cy="18" rx="7"  ry="5"  fill="#2d6a4f"/>
+          <ellipse cx="78" cy="18" rx="7"  ry="5"  fill="#2d6a4f"/>
+          <!-- red-tipped teeth (shown as amber) -->
+          <rect x="3"  y="33" width="4" height="4" rx="1" fill="#d4501a"/>
+          <rect x="9"  y="34" width="4" height="4" rx="1" fill="#d4501a"/>
+          <rect x="50" y="37" width="5" height="4" rx="1" fill="#d4501a"/>
+          <rect x="58" y="37" width="5" height="4" rx="1" fill="#d4501a"/>
+        </svg>
+        <p>Insectivore/carnivore. <strong>Very elongated, pointed skull.</strong> NOT a rodent — has reddish-tipped teeth (shown orange).</p>
+        <span class="skull-tag">Long pointed snout · Red-tipped teeth</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ─── FOOD WEB ───────────────────────────── -->
+<div id="s-foodweb" class="screen">
+  <div class="wrap">
+    <div class="fw-card">
+      <h2>Step 4 — Build the Food Web</h2>
+      <p class="hint">Click an organism card on the right to select it (it turns gold), then click the correct trophic level row to place it. Once all organisms are placed, click Check!</p>
+
+      <div class="fw-build-layout">
+        <div class="fw-slots-col" id="fw-slots">
+          <!-- Trophic level slots built by JS -->
+        </div>
+        <div class="fw-pool-col">
+          <h3>🧩 Organisms to Place</h3>
+          <div class="fw-org-cards" id="fw-org-pool"></div>
+          <div style="padding:9px;background:rgba(0,0,0,.2);border-radius:8px;font-size:.74rem;color:var(--muted);line-height:1.55;">
+            <strong style="color:var(--gold)">Tip:</strong> Use what you found in your pellet and your knowledge of the ecosystem to place each organism at the right level.
+          </div>
+        </div>
+      </div>
+
+      <div id="fw-check-result" class="fw-check-result"></div>
+
+      <div class="btn-row mt-16">
+        <button class="btn sec" onclick="goTo('identify')">← Back</button>
+        <button class="btn hidden" id="btn-check-fw" onclick="checkFoodWeb()">Check Food Web ✓</button>
+        <button class="btn hidden" id="btn-to-results" onclick="goTo('results')">See Results →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── RESULTS ────────────────────────────── -->
+<div id="s-results" class="screen">
+  <div class="wrap">
+    <h2>🎉 Lab Complete!</h2>
+    <p class="sub">Here's what you discovered about this owl's diet and the ecosystem.</p>
+
+    <div class="score-ring">
+      <span class="score-num" id="final-score">0</span>
+      <span class="score-lbl">/ 100 pts</span>
+    </div>
+
+    <div class="res-card">
+      <h3>🦴 Prey Animals Found in Your Pellet</h3>
+      <div class="prey-badges" id="prey-found"></div>
+    </div>
+
+    <div class="res-card">
+      <h3>📊 Sorting Accuracy</h3>
+      <p id="sort-result-text" style="font-size:.88rem;color:var(--cream);line-height:1.65;"></p>
+    </div>
+
+    <div class="res-card">
+      <h3>🌿 Ecosystem Connections</h3>
+      <div id="eco-facts"></div>
+    </div>
+
+    <div class="res-card" style="border-left-color:var(--sage)">
+      <h3>💡 Reflection Questions</h3>
+      <div id="reflect-qs" style="font-size:.87rem;color:var(--cream);line-height:1.7;"></div>
+    </div>
+
+    <div class="btn-row mt-22">
+      <button class="btn sec" onclick="restart()">🔄 Dissect Another Pellet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════ -->
+<script>
+// ─────────────────────────────────────────────
+//  DATA
+// ─────────────────────────────────────────────
+const PREY = {
+  vole: {
+    name:       'Meadow Vole',
+    sci:        'Microtus pennsylvanicus',
+    icon:       '🐭',
+    trophic:    'Primary Consumer',
+    diet:       'Grasses, seeds, roots, bark',
+    habitat:    'Meadows, fields, wetland margins',
+    skullKey:   'Wide, rounded skull; large flat molars; very blunt snout',
+  },
+  mouse: {
+    name:       'House Mouse',
+    sci:        'Mus musculus',
+    icon:       '🐁',
+    trophic:    'Primary Consumer',
+    diet:       'Seeds, grain, insects, food scraps',
+    habitat:    'Fields, farms, and buildings',
+    skullKey:   'Narrower skull; longer, more pointed snout; smaller molars',
+  },
+  shrew: {
+    name:       'Short-tailed Shrew',
+    sci:        'Blarina brevicauda',
+    icon:       '🦔',
+    trophic:    'Secondary Consumer',
+    diet:       'Earthworms, insects, snails, small mice',
+    habitat:    'Forests, field edges, wetlands',
+    skullKey:   'Very elongated, pointed skull; tiny reddish-tipped teeth; not a rodent!',
+  }
+};
+
+const PREY_BONES = {
+  vole: [
+    { type:'skull',     label:'Vole Skull',   icon:'💀', bin:'skull'     },
+    { type:'skull',     label:'Vole Skull',   icon:'💀', bin:'skull'     },
+    { type:'jaw',       label:'Jaw',          icon:'🦷', bin:'jaw'       },
+    { type:'jaw',       label:'Jaw',          icon:'🦷', bin:'jaw'       },
+    { type:'long_bone', label:'Femur',        icon:'🦴', bin:'long_bone' },
+    { type:'long_bone', label:'Femur',        icon:'🦴', bin:'long_bone' },
+    { type:'long_bone', label:'Humerus',      icon:'🦴', bin:'long_bone' },
+    { type:'long_bone', label:'Tibia',        icon:'🦴', bin:'long_bone' },
+    { type:'small',     label:'Rib',          icon:'〰️', bin:'small'     },
+    { type:'small',     label:'Rib',          icon:'〰️', bin:'small'     },
+    { type:'small',     label:'Rib',          icon:'〰️', bin:'small'     },
+    { type:'small',     label:'Vertebra',     icon:'⬡',  bin:'small'     },
+    { type:'small',     label:'Vertebra',     icon:'⬡',  bin:'small'     },
+    { type:'small',     label:'Vertebra',     icon:'⬡',  bin:'small'     },
+    { type:'small',     label:'Scapula',      icon:'🔲', bin:'small'     },
+  ],
+  mouse: [
+    { type:'skull',     label:'Mouse Skull',  icon:'💀', bin:'skull'     },
+    { type:'jaw',       label:'Jaw',          icon:'🦷', bin:'jaw'       },
+    { type:'jaw',       label:'Jaw',          icon:'🦷', bin:'jaw'       },
+    { type:'long_bone', label:'Femur',        icon:'🦴', bin:'long_bone' },
+    { type:'long_bone', label:'Humerus',      icon:'🦴', bin:'long_bone' },
+    { type:'long_bone', label:'Tibia',        icon:'🦴', bin:'long_bone' },
+    { type:'small',     label:'Rib',          icon:'〰️', bin:'small'     },
+    { type:'small',     label:'Rib',          icon:'〰️', bin:'small'     },
+    { type:'small',     label:'Vertebra',     icon:'⬡',  bin:'small'     },
+    { type:'small',     label:'Vertebra',     icon:'⬡',  bin:'small'     },
+    { type:'small',     label:'Scapula',      icon:'🔲', bin:'small'     },
+  ],
+  shrew: [
+    { type:'skull',     label:'Shrew Skull',  icon:'💀', bin:'skull'     },
+    { type:'jaw',       label:'Jaw',          icon:'🦷', bin:'jaw'       },
+    { type:'jaw',       label:'Jaw',          icon:'🦷', bin:'jaw'       },
+    { type:'long_bone', label:'Femur',        icon:'🦴', bin:'long_bone' },
+    { type:'long_bone', label:'Humerus',      icon:'🦴', bin:'long_bone' },
+    { type:'small',     label:'Rib',          icon:'〰️', bin:'small'     },
+    { type:'small',     label:'Rib',          icon:'〰️', bin:'small'     },
+    { type:'small',     label:'Vertebra',     icon:'⬡',  bin:'small'     },
+    { type:'small',     label:'Vertebra',     icon:'⬡',  bin:'small'     },
+  ]
+};
+
+// ─────────────────────────────────────────────
+//  SKULL SVG SPECIMENS  (unlabeled — student identifies by comparing to reference)
+// ─────────────────────────────────────────────
+const SKULL_OBS = {
+  vole:  'Cranium width-to-length ratio: <strong>very wide and rounded</strong>. Snout: extremely short and blunt with almost no forward projection. Molars: four large, flat-topped rectangular teeth visible on each side — squared off for grinding.',
+  mouse: 'Cranium: moderately wide. Snout: <strong>noticeably elongated and pointed</strong>, projecting well forward beyond the face. Molars smaller than those above; prominent chisel-shaped incisors visible at the snout tip.',
+  shrew: 'Cranium: surprisingly small relative to skull total length. Snout: <strong>extremely long and sharply pointed</strong> — longer than the braincase itself. Teeth: numerous and very small; look closely for <strong>reddish-orange pigmentation</strong> on the tooth tips.'
+};
+
+function getSkullSVG(preyKey) {
+  if (preyKey === 'vole') {
+    return `<svg width="220" height="108" viewBox="0 0 220 108" style="display:block;margin:0 auto">
+      <rect width="220" height="108" rx="8" fill="#192919"/>
+      <ellipse cx="110" cy="100" rx="92" ry="7" fill="rgba(0,0,0,.45)"/>
+      <!-- wide rounded cranium -->
+      <ellipse cx="116" cy="50" rx="90" ry="43" fill="#e8d5a3" stroke="#c4a25a" stroke-width="2"/>
+      <!-- short blunt snout -->
+      <ellipse cx="38"  cy="56" rx="23" ry="15" fill="#e8d5a3" stroke="#c4a25a" stroke-width="2"/>
+      <!-- eye sockets -->
+      <ellipse cx="72"  cy="37" rx="16" ry="13" fill="#192919" stroke="#a07830" stroke-width="1"/>
+      <ellipse cx="148" cy="37" rx="16" ry="13" fill="#192919" stroke="#a07830" stroke-width="1"/>
+      <!-- large flat molars -->
+      <rect x="27" y="68" width="13" height="9" rx="2" fill="#c4a25a" stroke="#9a7830" stroke-width="1"/>
+      <rect x="43" y="68" width="13" height="9" rx="2" fill="#c4a25a" stroke="#9a7830" stroke-width="1"/>
+      <rect x="143" y="68" width="13" height="9" rx="2" fill="#c4a25a" stroke="#9a7830" stroke-width="1"/>
+      <rect x="159" y="68" width="13" height="9" rx="2" fill="#c4a25a" stroke="#9a7830" stroke-width="1"/>
+      <!-- suture lines -->
+      <line x1="116" y1="12" x2="116" y2="52" stroke="#c4a25a" stroke-width="1" stroke-dasharray="3,3" opacity=".5"/>
+      <line x1="60"  y1="52" x2="175" y2="52" stroke="#c4a25a" stroke-width="1" stroke-dasharray="3,3" opacity=".4"/>
+      <!-- scale bar -->
+      <line x1="168" y1="94" x2="200" y2="94" stroke="#52b788" stroke-width="1.5"/>
+      <line x1="168" y1="90" x2="168" y2="98" stroke="#52b788" stroke-width="1.5"/>
+      <line x1="200" y1="90" x2="200" y2="98" stroke="#52b788" stroke-width="1.5"/>
+      <text x="184" y="107" text-anchor="middle" fill="#52b788" font-size="9" font-family="sans-serif">10 mm</text>
+    </svg>`;
+  } else if (preyKey === 'mouse') {
+    return `<svg width="220" height="108" viewBox="0 0 220 108" style="display:block;margin:0 auto">
+      <rect width="220" height="108" rx="8" fill="#192919"/>
+      <ellipse cx="108" cy="100" rx="84" ry="7" fill="rgba(0,0,0,.45)"/>
+      <!-- narrower cranium -->
+      <ellipse cx="130" cy="48" rx="76" ry="36" fill="#e8d5a3" stroke="#c4a25a" stroke-width="2"/>
+      <!-- longer pointed snout -->
+      <ellipse cx="34" cy="55" rx="36" ry="14" fill="#e8d5a3" stroke="#c4a25a" stroke-width="2"/>
+      <!-- pointed tip -->
+      <ellipse cx="6"  cy="57" rx="11" ry="8"  fill="#e8d5a3" stroke="#c4a25a" stroke-width="2"/>
+      <!-- eye sockets -->
+      <ellipse cx="88"  cy="36" rx="13" ry="10" fill="#192919" stroke="#a07830" stroke-width="1"/>
+      <ellipse cx="155" cy="36" rx="13" ry="10" fill="#192919" stroke="#a07830" stroke-width="1"/>
+      <!-- smaller molars -->
+      <rect x="14" y="63" width="10" height="7" rx="1.5" fill="#c4a25a"/>
+      <rect x="27" y="63" width="10" height="7" rx="1.5" fill="#c4a25a"/>
+      <rect x="148" y="63" width="10" height="7" rx="1.5" fill="#c4a25a"/>
+      <rect x="161" y="63" width="10" height="7" rx="1.5" fill="#c4a25a"/>
+      <!-- prominent front incisors -->
+      <rect x="2"  y="60" width="7" height="11" rx="2" fill="#f0e8c0" stroke="#c4a25a" stroke-width="1"/>
+      <line x1="130" y1="14" x2="130" y2="50" stroke="#c4a25a" stroke-width="1" stroke-dasharray="3,3" opacity=".4"/>
+      <line x1="72"  y1="50" x2="192" y2="50" stroke="#c4a25a" stroke-width="1" stroke-dasharray="3,3" opacity=".35"/>
+      <!-- scale bar -->
+      <line x1="168" y1="94" x2="196" y2="94" stroke="#52b788" stroke-width="1.5"/>
+      <line x1="168" y1="90" x2="168" y2="98" stroke="#52b788" stroke-width="1.5"/>
+      <line x1="196" y1="90" x2="196" y2="98" stroke="#52b788" stroke-width="1.5"/>
+      <text x="182" y="107" text-anchor="middle" fill="#52b788" font-size="9" font-family="sans-serif">10 mm</text>
+    </svg>`;
+  } else {
+    return `<svg width="220" height="108" viewBox="0 0 220 108" style="display:block;margin:0 auto">
+      <rect width="220" height="108" rx="8" fill="#192919"/>
+      <ellipse cx="108" cy="100" rx="84" ry="7" fill="rgba(0,0,0,.45)"/>
+      <!-- small cranium (back) -->
+      <ellipse cx="168" cy="44" rx="48" ry="30" fill="#e8d5a3" stroke="#c4a25a" stroke-width="2"/>
+      <!-- very long rostrum -->
+      <ellipse cx="82"  cy="53" rx="82" ry="17" fill="#e8d5a3" stroke="#c4a25a" stroke-width="2"/>
+      <!-- needle tip -->
+      <ellipse cx="6"   cy="55" rx="12" ry="8"  fill="#e8d5a3" stroke="#c4a25a" stroke-width="2"/>
+      <!-- small eye sockets (set far back) -->
+      <ellipse cx="150" cy="34" rx="9" ry="7"  fill="#192919" stroke="#a07830" stroke-width="1"/>
+      <ellipse cx="184" cy="34" rx="9" ry="7"  fill="#192919" stroke="#a07830" stroke-width="1"/>
+      <!-- many small red-tipped teeth -->
+      <rect x="2"  y="61" width="5" height="5" rx="1" fill="#c03a14"/>
+      <rect x="9"  y="61" width="5" height="5" rx="1" fill="#c03a14"/>
+      <rect x="16" y="60" width="5" height="5" rx="1" fill="#c03a14"/>
+      <rect x="23" y="60" width="5" height="5" rx="1" fill="#c03a14"/>
+      <rect x="30" y="60" width="5" height="5" rx="1" fill="#c03a14"/>
+      <rect x="37" y="60" width="5" height="5" rx="1" fill="#c03a14"/>
+      <rect x="44" y="60" width="5" height="5" rx="1" fill="#c03a14"/>
+      <rect x="158" y="63" width="5" height="5" rx="1" fill="#c03a14"/>
+      <rect x="166" y="63" width="5" height="5" rx="1" fill="#c03a14"/>
+      <line x1="168" y1="16" x2="168" y2="47" stroke="#c4a25a" stroke-width="1" stroke-dasharray="3,3" opacity=".4"/>
+      <!-- scale bar -->
+      <line x1="172" y1="94" x2="206" y2="94" stroke="#52b788" stroke-width="1.5"/>
+      <line x1="172" y1="90" x2="172" y2="98" stroke="#52b788" stroke-width="1.5"/>
+      <line x1="206" y1="90" x2="206" y2="98" stroke="#52b788" stroke-width="1.5"/>
+      <text x="189" y="107" text-anchor="middle" fill="#52b788" font-size="9" font-family="sans-serif">10 mm</text>
+    </svg>`;
+  }
+}
+
+// ─────────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────────
+let pelletData     = null;
+let revealIdx      = 0;
+let selectedBoneId  = null;
+let sortedBins      = { skull:[], jaw:[], long_bone:[], small:[] };
+let sortScore       = 0;
+let identAnswers    = {};
+let identScore      = 0;
+let selectedFwOrgId = null;
+let fwPlacements    = {};
+let fwOrganisms     = [];
+let fwSlots         = [];
+let fwScore         = 0;
+let currentPhase    = 'intro';
+
+// ─────────────────────────────────────────────
+//  GENERATE PELLET
+// ─────────────────────────────────────────────
+function generatePellet() {
+  const all    = Object.keys(PREY);
+  const count  = Math.random() < 0.5 ? 1 : 2;   // 50% chance of 2 prey
+  const chosen = shuffle([...all]).slice(0, count);
+  const bones  = [];
+  chosen.forEach((pk, pi) => {
+    PREY_BONES[pk].forEach((b, bi) => {
+      bones.push({ id: `b${pi}_${bi}`, preyKey: pk, ...b });
+    });
+  });
+  return { prey: chosen, bones: shuffle(bones) };
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// ─────────────────────────────────────────────
+//  SCREEN NAVIGATION
+// ─────────────────────────────────────────────
+const PHASES = ['dissect','sort','identify','foodweb','results'];
+
+function goTo(phase) {
+  currentPhase = phase;
+
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('s-' + phase).classList.add('active');
+
+  const idx = PHASES.indexOf(phase);
+  document.querySelectorAll('.step').forEach((el, i) => {
+    el.classList.toggle('done',   i < idx);
+    el.classList.toggle('active', i === idx);
+  });
+
+  if (phase === 'dissect')  setupDissect();
+  if (phase === 'sort')     setupSort();
+  if (phase === 'identify') setupIdentify();
+  if (phase === 'foodweb')  setupFoodWeb();
+  if (phase === 'results')  setupResults();
+}
+
+// ─────────────────────────────────────────────
+//  DISSECT PHASE
+// ─────────────────────────────────────────────
+function setupDissect() {
+  // Reset UI if re-entering
+  document.getElementById('bones-tray').innerHTML = '';
+  document.getElementById('prog-fill').style.width = '0%';
+  document.getElementById('prog-label').textContent = '0 bones found';
+  document.getElementById('btn-to-sort').classList.add('hidden');
+  document.getElementById('pulse').classList.remove('hide');
+  document.getElementById('pellet-label').style.display = '';
+  document.querySelectorAll('.crack').forEach(c => c.style.opacity = '0');
+  revealIdx = 0;
+}
+
+function clickPellet() {
+  if (revealIdx >= pelletData.bones.length) return;
+
+  const bone = pelletData.bones[revealIdx++];
+
+  // Add bone chip
+  const tag = document.createElement('div');
+  tag.className = 'bone-tag';
+  tag.innerHTML = `${bone.icon} ${bone.label}`;
+  document.getElementById('bones-tray').appendChild(tag);
+
+  // Update progress
+  const pct = (revealIdx / pelletData.bones.length) * 100;
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-label').textContent =
+    revealIdx + ' of ' + pelletData.bones.length + ' bones found';
+
+  // Show cracks progressively
+  const cracks = document.querySelectorAll('.crack');
+  const show = Math.round((revealIdx / pelletData.bones.length) * cracks.length);
+  cracks.forEach((c, i) => { c.style.opacity = i < show ? '1' : '0'; });
+
+  // Shake pellet
+  const svg = document.getElementById('pellet-svg');
+  const deg = (Math.random() * 8 - 4).toFixed(1);
+  svg.style.transform = `rotate(${deg}deg) scale(1.06)`;
+  setTimeout(() => { svg.style.transform = ''; }, 140);
+
+  // Check done
+  if (revealIdx >= pelletData.bones.length) {
+    document.getElementById('btn-to-sort').classList.remove('hidden');
+    document.getElementById('pulse').classList.add('hide');
+    document.getElementById('pellet-label').style.display = 'none';
+    document.getElementById('dissect-hint').textContent =
+      'All ' + pelletData.bones.length + ' bones found! Click Sort My Bones to continue.';
+  }
+}
+
+// ─────────────────────────────────────────────
+//  SORT PHASE
+// ─────────────────────────────────────────────
+function setupSort() {
+  sortedBins     = { skull:[], jaw:[], long_bone:[], small:[] };
+  selectedBoneId = null;
+  sortScore      = 0;
+
+  // Pool
+  const pool = document.getElementById('sort-pool');
+  pool.innerHTML = '';
+  pelletData.bones.forEach(b => {
+    const el = document.createElement('div');
+    el.className = 'sort-bone';
+    el.id = 'sb_' + b.id;
+    el.innerHTML = `${b.icon} ${b.label}`;
+    el.onclick = () => selectSortBone(b.id, el);
+    pool.appendChild(el);
+  });
+
+  // Clear bins
+  ['skull','jaw','long_bone','small'].forEach(bin => {
+    document.getElementById('placed-' + bin).innerHTML = '';
+    document.getElementById('hint-' + bin).style.display = '';
+  });
+
+  document.getElementById('sort-score-bar').classList.add('hidden');
+  document.getElementById('btn-to-identify').classList.add('hidden');
+}
+
+function selectSortBone(id, el) {
+  if (el.classList.contains('placed')) return;
+
+  if (selectedBoneId === id) {
+    el.classList.remove('sel');
+    selectedBoneId = null;
+    return;
+  }
+
+  // Deselect old
+  document.querySelectorAll('.sort-bone.sel').forEach(e => e.classList.remove('sel'));
+  selectedBoneId = id;
+  el.classList.add('sel');
+
+  // Highlight valid bins
+  document.querySelectorAll('.sort-bin').forEach(b => b.classList.add('hi'));
+}
+
+function dropBone(bin) {
+  if (!selectedBoneId) return;
+
+  const bone = pelletData.bones.find(b => b.id === selectedBoneId);
+  if (!bone) return;
+
+  // Remove selection
+  const srcEl = document.getElementById('sb_' + selectedBoneId);
+  srcEl.classList.remove('sel');
+  srcEl.classList.add('placed');
+  document.querySelectorAll('.sort-bin').forEach(b => b.classList.remove('hi'));
+
+  // Add to bin display
+  const placedArea = document.getElementById('placed-' + bin);
+  const hint       = document.getElementById('hint-' + bin);
+  hint.style.display = 'none';
+  const mini = document.createElement('div');
+  mini.className = 'mini-bone';
+  mini.textContent = bone.icon + ' ' + bone.label;
+  placedArea.appendChild(mini);
+
+  // Track
+  sortedBins[bin].push({ ...bone, placedIn: bin });
+
+  selectedBoneId = null;
+
+  // Check all placed
+  const allPlaced = document.querySelectorAll('.sort-bone.placed').length === pelletData.bones.length;
+  if (allPlaced) finishSort();
+}
+
+function finishSort() {
+  // Calculate score
+  let correct = 0;
+  Object.keys(sortedBins).forEach(bin => {
+    sortedBins[bin].forEach(b => {
+      if (b.bin === bin) correct++;
+    });
+  });
+  const total   = pelletData.bones.length;
+  sortScore     = Math.round((correct / total) * 50);
+
+  const bar = document.getElementById('sort-score-bar');
+  bar.classList.remove('hidden');
+  bar.innerHTML = `
+    Sorting result: <span class="correct">${correct} correct</span> /
+    <span>${total} bones</span> — that's
+    <span class="${correct >= total * .8 ? 'correct' : 'wrong'}">${Math.round(correct/total*100)}%</span>
+    ${correct === total ? ' 🎉 Perfect sort!' : ''}
+  `;
+  document.getElementById('btn-to-identify').classList.remove('hidden');
+}
+
+// ─────────────────────────────────────────────
+//  IDENTIFY PHASE
+// ─────────────────────────────────────────────
+function setupIdentify() {
+  identAnswers = {};
+  identScore   = 0;
+
+  const skulls = pelletData.bones.filter(b => b.type === 'skull');
+  const preyKeys = Object.keys(PREY);
+
+  const container = document.getElementById('skull-questions');
+  container.innerHTML = '';
+
+  skulls.forEach((skull, idx) => {
+    const block = document.createElement('div');
+    block.className = 'skull-item';
+
+    const choiceHTML = preyKeys.map(pk => `
+      <div class="skull-choice" id="ch_${skull.id}_${pk}"
+           onclick="answerSkull('${skull.id}', '${pk}', '${skull.preyKey}')">
+        <span class="sc-icon">${PREY[pk].icon}</span>
+        <div>
+          <strong>${PREY[pk].name}</strong>
+          <div style="font-size:.73rem;color:var(--muted)">${PREY[pk].sci}</div>
+        </div>
+      </div>
+    `).join('');
+
+    block.innerHTML = `
+      <h4>💀 Skull ${idx + 1} — Which species does this skull belong to?</h4>
+      <div class="skull-specimen">
+        <div class="specimen-label">🔬 Specimen ${idx + 1} — compare to the reference guide →</div>
+        ${getSkullSVG(skull.preyKey)}
+        <div class="obs-features"><strong>Observations:</strong> ${SKULL_OBS[skull.preyKey]}</div>
+      </div>
+      <div class="skull-choices" id="choices_${skull.id}">${choiceHTML}</div>
+      <div class="id-feedback" id="fb_${skull.id}"></div>
+    `;
+    container.appendChild(block);
+  });
+
+  document.getElementById('btn-to-fw').classList.add('hidden');
+}
+
+function answerSkull(skullId, chosen, correct) {
+  if (identAnswers[skullId] !== undefined) return;  // already answered
+  identAnswers[skullId] = chosen;
+
+  const isRight = chosen === correct;
+  if (isRight) identScore += 25;
+
+  // Lock all choices for this skull
+  const allChoices = document.querySelectorAll(`#choices_${skullId} .skull-choice`);
+  allChoices.forEach(c => {
+    c.classList.add('locked');
+    const preyKey = c.id.split('_').pop();
+    if (preyKey === chosen)  c.classList.add(isRight ? 'correct' : 'wrong');
+    if (preyKey === correct && !isRight) c.classList.add('correct');
+  });
+
+  // Feedback
+  const fb = document.getElementById('fb_' + skullId);
+  fb.style.display = 'block';
+  fb.style.background    = isRight ? 'rgba(82,183,136,.15)' : 'rgba(196,69,54,.1)';
+  fb.style.borderLeft    = '3px solid ' + (isRight ? 'var(--sage)' : 'var(--red)');
+  fb.style.padding       = '9px 12px';
+  fb.style.borderRadius  = '8px';
+  fb.innerHTML = isRight
+    ? `<strong style="color:var(--sage)">✓ Correct!</strong> ${PREY[correct].skullKey}`
+    : `<strong style="color:var(--red)">✗ Not quite.</strong> That was a <strong>${PREY[correct].name}</strong> skull. Key feature: ${PREY[correct].skullKey}`;
+
+  // Reveal continue button when all skulls answered
+  const skulls = pelletData.bones.filter(b => b.type === 'skull');
+  if (skulls.every(s => identAnswers[s.id] !== undefined)) {
+    document.getElementById('btn-to-fw').classList.remove('hidden');
+  }
+}
+
+// ─────────────────────────────────────────────
+//  FOOD WEB PHASE  (interactive build)
+// ─────────────────────────────────────────────
+function setupFoodWeb() {
+  selectedFwOrgId = null;
+  fwPlacements    = {};
+  fwScore         = 0;
+
+  const hasShrew = pelletData.prey.includes('shrew');
+
+  // Define organisms (order = pool display order)
+  fwOrganisms = [
+    { id:'sun',     icon:'☀️',  label:'Sun',               correctSlot:'energy' },
+    { id:'plants',  icon:'🌿',  label:'Grasses & Plants',  correctSlot:'T1'     },
+  ];
+  if (hasShrew) {
+    fwOrganisms.push({ id:'insects', icon:'🪱', label:'Insects & Worms', correctSlot:'T2' });
+  }
+  pelletData.prey.forEach(pk => {
+    fwOrganisms.push({
+      id: pk, icon: PREY[pk].icon, label: PREY[pk].name,
+      correctSlot: pk === 'shrew' ? 'T3' : 'T2'
+    });
+  });
+  fwOrganisms.push({ id:'owl', icon:'🦉', label:'Barn Owl', correctSlot:'apex' });
+
+  // Define trophic level slots
+  fwSlots = [
+    { id:'energy', label:'Energy Source',                      hint:'What powers all life on Earth?' },
+    { id:'T1',     label:'Producer — Trophic Level 1',         hint:'Makes its own food through photosynthesis' },
+    { id:'T2',     label:'Primary Consumer — Trophic Level 2', hint:'Eats producers directly' },
+  ];
+  if (hasShrew) {
+    fwSlots.push({ id:'T3', label:'Secondary Consumer — Trophic Level 3', hint:'Eats primary consumers' });
+  }
+  fwSlots.push({ id:'apex', label:'Apex Predator',             hint:'Top of this food chain — nothing hunts it here' });
+
+  // Render slots column
+  const slotsCol = document.getElementById('fw-slots');
+  slotsCol.innerHTML = '';
+  fwSlots.forEach((slot, i) => {
+    if (i > 0) {
+      const arr = document.createElement('div');
+      arr.className = 'fw-arrow-row';
+      arr.textContent = '▲ energy flows up';
+      slotsCol.appendChild(arr);
+    }
+    const card = document.createElement('div');
+    card.className = 'fw-slot-card';
+    card.id = 'fwslot-' + slot.id;
+    card.innerHTML = `
+      <div class="slot-label">${slot.label}</div>
+      <div class="slot-hint" id="fwhint-${slot.id}">${slot.hint}</div>
+      <div class="slot-placed" id="fwplaced-${slot.id}"></div>
+    `;
+    card.onclick = () => placeInSlot(slot.id);
+    slotsCol.appendChild(card);
+  });
+
+  // Render organism pool
+  const pool = document.getElementById('fw-org-pool');
+  pool.innerHTML = '';
+  fwOrganisms.forEach(org => {
+    const card = document.createElement('div');
+    card.className = 'fw-org-card';
+    card.id = 'fworg-' + org.id;
+    card.innerHTML = `<span style="font-size:1.25rem">${org.icon}</span> ${org.label}`;
+    card.onclick = () => selectFwOrg(org.id, card);
+    pool.appendChild(card);
+  });
+
+  // Reset buttons and result box
+  document.getElementById('btn-check-fw').classList.add('hidden');
+  document.getElementById('btn-to-results').classList.add('hidden');
+  document.getElementById('fw-check-result').style.display = 'none';
+}
+
+function selectFwOrg(id, el) {
+  if (el.classList.contains('placed')) return;
+
+  // Clicking same card deselects
+  if (selectedFwOrgId === id) {
+    el.classList.remove('sel');
+    selectedFwOrgId = null;
+    document.querySelectorAll('.fw-slot-card').forEach(s => s.classList.remove('hi'));
+    return;
+  }
+
+  document.querySelectorAll('.fw-org-card.sel').forEach(e => e.classList.remove('sel'));
+  selectedFwOrgId = id;
+  el.classList.add('sel');
+  document.querySelectorAll('.fw-slot-card').forEach(s => s.classList.add('hi'));
+}
+
+function placeInSlot(slotId) {
+  if (!selectedFwOrgId) return;
+
+  const org = fwOrganisms.find(o => o.id === selectedFwOrgId);
+  if (!org) return;
+
+  fwPlacements[org.id] = slotId;
+
+  // Update pool card
+  const orgEl = document.getElementById('fworg-' + org.id);
+  orgEl.classList.remove('sel');
+  orgEl.classList.add('placed');
+  document.querySelectorAll('.fw-slot-card').forEach(s => s.classList.remove('hi'));
+
+  // Add badge to slot
+  const placedArea = document.getElementById('fwplaced-' + slotId);
+  document.getElementById('fwhint-' + slotId).style.display = 'none';
+  const badge = document.createElement('div');
+  badge.className = 'fw-placed-org';
+  badge.id = 'fwbadge-' + org.id;
+  badge.innerHTML = org.icon + ' ' + org.label;
+  placedArea.appendChild(badge);
+
+  selectedFwOrgId = null;
+
+  // Show check button when all placed
+  if (Object.keys(fwPlacements).length === fwOrganisms.length) {
+    document.getElementById('btn-check-fw').classList.remove('hidden');
+  }
+}
+
+function checkFoodWeb() {
+  let correct = 0;
+  const total = fwOrganisms.length;
+
+  fwOrganisms.forEach(org => {
+    const isCorrect = fwPlacements[org.id] === org.correctSlot;
+    if (isCorrect) correct++;
+
+    // Color-code the placed badge
+    const badge = document.getElementById('fwbadge-' + org.id);
+    if (badge) badge.classList.add(isCorrect ? 'correct-org' : 'wrong-org');
+
+    // If wrong, add a hint showing where it belongs
+    if (!isCorrect) {
+      const correctArea = document.getElementById('fwplaced-' + org.correctSlot);
+      if (correctArea) {
+        const hint = document.createElement('div');
+        hint.className = 'fw-placed-org hint-org';
+        hint.innerHTML = org.icon + ' ' + org.label + ' belongs here';
+        correctArea.appendChild(hint);
+      }
+    }
+  });
+
+  // Color-code slots
+  fwSlots.forEach(slot => {
+    const slotEl = document.getElementById('fwslot-' + slot.id);
+    const placed  = fwOrganisms.filter(o => fwPlacements[o.id] === slot.id);
+    const correct2 = fwOrganisms.filter(o => o.correctSlot === slot.id);
+    const allRight = placed.length === correct2.length &&
+                     placed.every(o => o.correctSlot === slot.id);
+    slotEl.classList.add(allRight ? 'correct' : 'wrong');
+    slotEl.onclick = null;
+  });
+
+  fwScore = Math.round((correct / total) * 25);
+
+  const res = document.getElementById('fw-check-result');
+  res.style.display = 'block';
+  res.innerHTML = `<strong>Food Web: ${correct} / ${total} organisms correctly placed.</strong>
+    ${correct === total
+      ? ' 🎉 Perfect! You understand energy flow in this ecosystem.'
+      : ' Incorrect placements are <span style="color:#ffaaaa">crossed out in red</span>; correct positions shown in <span style="color:var(--sage)">green</span>.'}
+    <br><br>
+    <strong>Remember the 10% Rule:</strong> Only ~10% of energy passes from each level to the next —
+    that's why apex predators like the barn owl are always far rarer than the prey they depend on.`;
+
+  document.getElementById('btn-check-fw').classList.add('hidden');
+  document.getElementById('btn-to-results').classList.remove('hidden');
+}
+
+// ─────────────────────────────────────────────
+//  RESULTS PHASE
+// ─────────────────────────────────────────────
+function setupResults() {
+  // Total score (sort 50pts + identify up to 50pts + food web 25pts bonus, cap 100)
+  const total = Math.min(100, sortScore + identScore + fwScore);
+  document.getElementById('final-score').textContent = total;
+
+  // Prey found
+  const preyDiv = document.getElementById('prey-found');
+  preyDiv.innerHTML = pelletData.prey.map(pk =>
+    `<div class="prey-badge">${PREY[pk].icon} ${PREY[pk].name}<br>
+     <span style="font-size:.72rem;color:var(--muted);font-weight:400">${PREY[pk].sci}</span></div>`
+  ).join('');
+
+  // Sort result text
+  const sortPct = sortScore * 2;
+  document.getElementById('sort-result-text').innerHTML =
+    `You correctly sorted <strong>${sortPct}%</strong> of the bones in your pellet. ` +
+    (sortPct === 100
+      ? 'Perfect — you clearly know your bone types!'
+      : sortPct >= 70
+        ? 'Great work! Review the sorting guide to sharpen the tricky ones.'
+        : 'Bones can be tricky — check the Field Guide and try another pellet!');
+
+  // Eco facts
+  const hasShrew = pelletData.prey.includes('shrew');
+  const facts = [
+    {
+      icon: '⚡',
+      text: `Your pellet contained <strong>${pelletData.prey.length} prey animal(s)</strong>. A barn owl swallows prey whole and produces 1–2 pellets per day, meaning it consumes <strong>3–4 animals nightly</strong>.`
+    },
+    {
+      icon: '📊',
+      text: `Energy transfer between trophic levels is only <strong>~10% efficient</strong>. Your owl required roughly <strong>${pelletData.prey.length * 10}×</strong> the prey's food intake in plant energy to sustain itself through this meal.`
+    },
+    {
+      icon: hasShrew ? '🔗' : '🌾',
+      text: hasShrew
+        ? `Because you found a shrew (a <strong>secondary consumer</strong>), your food web has <strong>4 trophic levels</strong>. Only ~0.1% of plant energy reaches the owl through this pathway — illustrating why top predators are so rare!`
+        : `Your prey were all <strong>primary consumers (herbivores)</strong>, giving you a classic 3-level food chain: Plants → Rodents → Owl.`
+    },
+    {
+      icon: '🌍',
+      text: `Barn owls are keystone regulators — a single pair controls <strong>~1,000 rodents per year</strong>. Without them, rodent populations could explode, overgrazing vegetation and destabilizing the entire food web.`
+    }
+  ];
+
+  document.getElementById('eco-facts').innerHTML = facts.map(f =>
+    `<div class="eco-fact"><span class="fi">${f.icon}</span><span>${f.text}</span></div>`
+  ).join('');
+
+  // Reflection questions
+  const reflect = [
+    '1. Why do scientists study owl pellets instead of tracking what owls eat directly?',
+    '2. If the vole population in an area crashed due to disease, predict two effects on the barn owl population.',
+    '3. A rancher poisons all the rodents on their land. Using evidence from this lab, explain why this could harm — not help — their farm.',
+    pelletData.prey.includes('shrew')
+      ? '4. ★ Bonus: You found a shrew. Explain why this means the owl indirectly depends on insect and worm populations.'
+      : '4. ★ Bonus: Would you expect to find more or fewer bones if the owl ate a shrew instead of a vole? Explain using body size and trophic level.'
+  ];
+
+  document.getElementById('reflect-qs').innerHTML = reflect.map(q =>
+    `<div class="reflect-q">
+       <p>${q}</p>
+       <textarea class="reflect-ta" placeholder="Write your answer here..."></textarea>
+     </div>`
+  ).join('');
+}
+
+// ─────────────────────────────────────────────
+//  RESTART
+// ─────────────────────────────────────────────
+function restart() {
+  pelletData      = generatePellet();
+  revealIdx       = 0;
+  selectedBoneId  = null;
+  sortedBins      = { skull:[], jaw:[], long_bone:[], small:[] };
+  sortScore       = 0;
+  identAnswers    = {};
+  identScore      = 0;
+  selectedFwOrgId = null;
+  fwPlacements    = {};
+  fwOrganisms     = [];
+  fwSlots         = [];
+  fwScore         = 0;
+
+  // Reset step indicators
+  document.querySelectorAll('.step').forEach(el => {
+    el.classList.remove('active','done');
+  });
+
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('s-intro').classList.add('active');
+  currentPhase = 'intro';
+}
+
+// ─────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  pelletData = generatePellet();
+});
+</script>
+</body>
+</html>
